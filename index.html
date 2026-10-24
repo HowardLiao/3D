@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>生活黑客群島</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen app. Header + filter rail on top, the 3D table fills the rest; reading happens in a right panel (desktop) or bottom sheet (phone). List mode swaps the table for a scrolling grid on the same data and filters. */
+:root {
+  --cream: #FBF7EF;
+  --paper: #F3ECE0;
+  --beige: #E7D9C3;
+  --sage: #7F9F86;
+  --sage-deep: #557460;
+  --coral: #DD7C5E;
+  --coral-deep: #B65A3E;
+  --sea: #A7C1C8;
+  --sea-deep: #5F8591;
+  --ink: #36322C;
+  --ink-soft: #6E665A;
+  --line: #E1D5C1;
+  --card: #FFFDF8;
+  --focus: #2F6E7E;
+  --f-display: "LXGW WenKai TC", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", serif;
+  --f-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --r-s: 8px; --r-m: 14px; --r-l: 22px;
+  --shadow: 0 1px 0 rgba(80,60,30,.06), 0 8px 24px -10px rgba(80,60,30,.28);
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6; overflow: hidden; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--cream); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
+.top { background: var(--cream); border-bottom: 1px solid var(--line); padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 14px; flex-wrap: wrap; position: relative; z-index: 5; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand svg { flex: none; }
+.brand-name { font-family: var(--f-display); font-weight: 700; font-size: 21px; letter-spacing: .04em; line-height: 1.1; }
+.brand-tag { font-size: 12px; color: var(--ink-soft); line-height: 1.2; }
+.search { flex: 1 1 260px; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; min-width: 0; max-width: 460px; }
+.search input { border: 0; background: transparent; outline: none; flex: 1; min-width: 0; padding: 2px 0; }
+.search:focus-within { border-color: var(--focus); box-shadow: 0 0 0 3px rgba(47,110,126,.18); }
+.search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.search .clear { border: 0; background: none; color: var(--ink-soft); padding: 0 4px; font-size: 18px; line-height: 1; }
+.top-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.seg { display: inline-flex; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: none; padding: 5px 14px; border-radius: 999px; font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); font-weight: 700; }
+.btn { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 14px; font-size: 14px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { border-color: var(--beige); background: #fff; }
+.btn-primary { background: var(--coral); border-color: var(--coral); color: #fff; font-weight: 700; }
+.btn-primary:hover { background: var(--coral-deep); border-color: var(--coral-deep); }
+.btn-icon { width: 36px; height: 36px; padding: 0; justify-content: center; }
+
+.rail { background: var(--cream); border-bottom: 1px solid var(--line); padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 14px; align-items: center; overflow-x: auto; scrollbar-width: none; position: relative; z-index: 4; }
+.rail::-webkit-scrollbar { display: none; }
+.rail-label { font-size: 12px; color: var(--ink-soft); letter-spacing: .08em; white-space: nowrap; }
+.chips { display: flex; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 3px 12px; font-size: 13px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+.chip .dot { width: 9px; height: 9px; border-radius: 3px; transform: rotate(45deg); flex: none; }
+.rail .sep { width: 1px; align-self: stretch; background: var(--line); flex: none; }
+
+.main { position: relative; min-height: 0; overflow: hidden; }
+.stage { position: absolute; inset: 0; touch-action: none; outline: none; }
+.stage canvas { display: block; width: 100%; height: 100%; }
+.stage:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; border-radius: 0; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+.isl-label { position: absolute; left: 0; top: 0; pointer-events: auto; transform: translate(-50%, -100%); border: 1px solid var(--line); background: rgba(255,253,248,.94); border-radius: 12px; padding: 4px 10px 5px; text-align: center; box-shadow: var(--shadow); white-space: nowrap; transition: opacity .2s, transform .2s; }
+.isl-label .n { font-family: var(--f-display); font-weight: 700; font-size: 16px; display: block; line-height: 1.25; }
+.isl-label .m { font-size: 12px; color: var(--ink-soft); display: flex; gap: 6px; justify-content: center; align-items: center; font-variant-numeric: tabular-nums; }
+.isl-label .new { color: var(--coral-deep); font-weight: 700; }
+.isl-label.hub { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.isl-label.hub .m { color: #D8CDBB; }
+.isl-label.hub .new { color: #F5B39C; }
+.isl-label[data-active="true"] { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(221,124,94,.25), var(--shadow); }
+.isl-label[data-dim="true"] { opacity: .55; }
+.isl-label:hover { border-color: var(--coral); }
+
+.tip { position: absolute; z-index: 3; width: 250px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-m); padding: 12px 14px; box-shadow: var(--shadow); pointer-events: none; font-size: 13px; }
+.tip h3 { margin: 0 0 4px; font-family: var(--f-display); font-size: 17px; }
+.tip p { margin: 0 0 8px; color: var(--ink-soft); }
+.tip .meta { display: flex; gap: 10px; font-variant-numeric: tabular-nums; }
+.tip .hint { margin-top: 6px; color: var(--sea-deep); font-weight: 500; }
+
+.intro { position: absolute; z-index: 3; left: max(16px, env(safe-area-inset-left, 0px)); top: 16px; width: min(380px, calc(100% - 32px)); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l); padding: 20px 22px; box-shadow: var(--shadow); }
+.intro .eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--sage-deep); font-weight: 700; }
+.intro h1 { font-family: var(--f-display); font-size: 26px; line-height: 1.3; margin: 4px 0 8px; text-wrap: balance; }
+.intro p { margin: 0 0 12px; color: var(--ink-soft); }
+.intro .stats { display: flex; gap: 16px; margin-bottom: 16px; font-variant-numeric: tabular-nums; }
+.intro .stats b { display: block; font-family: var(--f-display); font-size: 24px; line-height: 1.1; color: var(--ink); }
+.intro .stats span { font-size: 12px; color: var(--ink-soft); }
+.intro .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.intro .x { position: absolute; right: 10px; top: 10px; border: 0; background: none; font-size: 20px; color: var(--ink-soft); width: 32px; height: 32px; }
+
+.ctrl { position: absolute; z-index: 2; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 8px; align-items: flex-end; transition: right .3s; }
+.ctrl .stack { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+.ctrl .stack button { border: 0; background: none; width: 40px; height: 40px; font-size: 20px; }
+.ctrl .stack button + button { border-top: 1px solid var(--line); }
+.status { position: absolute; z-index: 2; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; max-width: calc(100% - 120px); }
+.pill { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; display: inline-flex; gap: 6px; align-items: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill.demo { background: #FFF1D6; border-color: #EBCF95; color: #7A5A17; font-weight: 700; }
+.pill.err { background: #FBE3DB; border-color: #E9B3A1; color: #8D3A22; }
+.pill button { border: 0; background: none; padding: 0; color: var(--sea-deep); font-weight: 700; text-decoration: underline; }
+
+.panel { position: absolute; z-index: 6; top: 0; right: 0; bottom: 0; width: min(420px, 100%); background: var(--cream); border-left: 1px solid var(--line); box-shadow: -12px 0 30px -18px rgba(80,60,30,.45); display: flex; flex-direction: column; transform: translateX(105%); transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+.panel.open { transform: none; }
+.panel-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.panel-head .grab { display: none; }
+.panel-head .spacer { flex: 1; }
+.panel-body { overflow-y: auto; padding: 18px 20px calc(28px + env(safe-area-inset-bottom, 0px)); flex: 1; min-height: 0; }
+.p-eyebrow { font-size: 12px; letter-spacing: .1em; color: var(--sage-deep); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.p-title { font-family: var(--f-display); font-size: 26px; line-height: 1.3; margin: 2px 0 6px; text-wrap: balance; outline: none; }
+.p-lead { color: var(--ink-soft); margin: 0 0 10px; }
+.p-meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-bottom: 14px; }
+.p-meta b { color: var(--ink); }
+.subs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.cards { display: grid; gap: 10px; }
+.icard { text-align: left; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-m); padding: 12px 14px; display: grid; gap: 4px; }
+.icard:hover { border-color: var(--beige); box-shadow: var(--shadow); }
+.icard h3 { margin: 0; font-size: 16px; line-height: 1.45; font-weight: 700; }
+.icard p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+.icard .foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tag { background: var(--paper); border-radius: 6px; padding: 1px 7px; font-size: 12px; color: var(--ink-soft); }
+.where { font-size: 12px; color: var(--sage-deep); font-weight: 700; }
+.imp { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 0 7px; border: 1px solid; }
+.imp.high { color: #8D3A22; border-color: #E9B3A1; background: #FBE3DB; }
+.imp.mid { color: #5E4A14; border-color: #E5D29C; background: #FBF1D3; }
+.imp.low { color: var(--ink-soft); border-color: var(--line); background: var(--paper); }
+.empty { text-align: center; padding: 30px 10px; color: var(--ink-soft); }
+.empty h3 { font-family: var(--f-display); color: var(--ink); font-size: 20px; margin: 0 0 6px; }
+
+.detail .back { margin-bottom: 14px; }
+.detail h2 { font-family: var(--f-display); font-size: 24px; line-height: 1.35; margin: 8px 0 8px; text-wrap: balance; outline: none; }
+.detail .sum { font-size: 16px; margin: 0 0 16px; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 18px; font-size: 13px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-m); padding: 12px 14px; }
+.facts dt { color: var(--ink-soft); white-space: nowrap; }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; }
+.detail h3 { font-size: 14px; letter-spacing: .06em; color: var(--sage-deep); margin: 16px 0 4px; }
+.detail .act { background: #EEF4EE; border-radius: var(--r-m); padding: 12px 14px; margin: 0; }
+.detail .src { margin-top: 18px; display: grid; gap: 6px; }
+.detail .src .btn[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+.note { font-size: 12px; color: #7A5A17; background: #FFF1D6; border-radius: var(--r-s); padding: 6px 10px; }
+
+.list { position: absolute; inset: 0; overflow-y: auto; padding-block: 22px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.list-inner { max-width: 1120px; margin: 0 auto; }
+.list-sum { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.list-sum h2 { font-family: var(--f-display); font-size: 24px; margin: 0; }
+.list-sum span { color: var(--ink-soft); font-size: 14px; }
+.group { margin-bottom: 26px; }
+.group-h { display: flex; align-items: center; gap: 4px 10px; margin: 0 0 10px; flex-wrap: wrap; }
+.group-h h3 { white-space: nowrap; }
+.group-h h3 { margin: 0; font-family: var(--f-display); font-size: 20px; }
+.group-h .hex { width: 14px; height: 14px; clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); flex: none; }
+.group-h span { color: var(--ink-soft); font-size: 13px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+
+.loading, .fallback { position: absolute; inset: 0; z-index: 7; display: grid; place-items: center; background: var(--paper); text-align: center; padding: 20px; }
+.loading .hexspin { width: 46px; height: 46px; background: var(--sage); clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); margin: 0 auto 12px; animation: spin 1.6s ease-in-out infinite; }
+@keyframes spin { 50% { transform: rotate(180deg) scale(.85); background: var(--coral); } }
+.loading p { font-family: var(--f-display); font-size: 18px; margin: 0; }
+
+.toast { position: absolute; z-index: 8; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 0); background: var(--ink); color: var(--cream); border-radius: 14px; padding: 10px 12px 10px 16px; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow); max-width: min(520px, calc(100% - 32px)); font-size: 14px; }
+.toast b { color: #F5B39C; }
+.toast .btn { background: var(--cream); color: var(--ink); border-color: var(--cream); }
+.toast .x { border: 0; background: none; color: #D8CDBB; font-size: 18px; }
+
+.modal { position: absolute; inset: 0; z-index: 20; background: rgba(54,50,44,.35); display: grid; place-items: center; padding: 16px; }
+.modal-box { background: var(--cream); border-radius: var(--r-l); max-width: 560px; width: 100%; max-height: 100%; overflow-y: auto; padding: 22px 24px; box-shadow: var(--shadow); }
+.modal-box h2 { font-family: var(--f-display); margin: 0 0 8px; font-size: 24px; }
+.modal-box p, .modal-box li { color: var(--ink-soft); font-size: 14px; }
+.modal-box h3 { font-size: 14px; margin: 16px 0 6px; letter-spacing: .06em; color: var(--sage-deep); }
+.modal-box .row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 760px) {
+  .brand-tag { display: none; }
+  .search { order: 3; flex-basis: 100%; max-width: none; }
+  .top { gap: 10px; }
+  .top-actions .btn .lbl { display: none; }
+  .panel { top: auto; left: 0; width: 100%; height: 64%; border-left: 0; border-top: 1px solid var(--line); border-radius: var(--r-l) var(--r-l) 0 0; transform: translateY(105%); box-shadow: 0 -12px 30px -18px rgba(80,60,30,.45); }
+  .panel.tall { height: 92%; }
+  .panel-head .grab { display: inline-flex; }
+  .intro { top: 12px; padding: 16px 18px; }
+  .intro h1 { font-size: 19px; }
+  .intro p { display: none; }
+  .isl-label { padding: 3px 8px; }
+  .isl-label .n { font-size: 14px; }
+  .isl-label .m { font-size: 11px; }
+  .intro .stats { display: none; }
+  .tip { display: none; }
+  .status { max-width: calc(100% - 80px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><path d="M17 2 30 9.5v15L17 32 4 24.5v-15z" fill="#7F9F86"/><path d="M17 9 23.5 12.8v7.4L17 24l-6.5-3.8v-7.4z" fill="#FBF7EF"/><circle cx="17" cy="16.5" r="2.6" fill="#DD7C5E"/></svg>
+      <div><div class="brand-name">生活黑客群島</div><div class="brand-tag">以城市探索為入口的生活情報平台</div></div>
+    </div>
+    <label class="search" for="q">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5.2" fill="none" stroke="#6E665A" stroke-width="1.6"/><path d="m11 11 3.5 3.5" stroke="#6E665A" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span class="sr-only">搜尋情報</span>
+      <input id="q" type="search" placeholder="搜尋情報，例如：訂閱、防詐、收納" autocomplete="off">
+      <button class="clear" id="qClear" type="button" aria-label="清除搜尋" hidden>×</button>
+    </label>
+    <div class="top-actions">
+      <div class="seg" role="group" aria-label="瀏覽模式">
+        <button type="button" id="mCity" aria-pressed="true">城市模式</button>
+        <button type="button" id="mList" aria-pressed="false">清單模式</button>
+      </div>
+      <button class="btn btn-primary" type="button" id="todayBtn"><span aria-hidden="true">✦</span><span class="lbl">今日情報</span><span class="sr-only">今日情報</span></button>
+      <button class="btn btn-icon" type="button" id="aboutBtn" aria-label="關於此原型">i</button>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="篩選">
+    <span class="rail-label">主題</span>
+    <div class="chips" id="topicChips"></div>
+    <span class="sep" aria-hidden="true"></span>
+    <span class="rail-label">更新時間</span>
+    <div class="chips" id="timeChips"></div>
+  </nav>
+
+  <main class="main" id="main">
+    <div class="stage" id="stage" tabindex="0" role="application" aria-label="群島地圖。拖曳或方向鍵平移，滾輪或加減鍵縮放，按 0 回到全景。用 Tab 選擇島嶼。">
+      <div class="labels" id="labels"></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="list" id="list" hidden></div>
+
+    <section class="intro" id="intro" aria-labelledby="introTitle">
+      <button class="x" type="button" id="introClose" aria-label="關閉介紹">×</button>
+      <div class="eyebrow">LIFE HACK ARCHIPELAGO</div>
+      <h1 id="introTitle">把複雜的生活資訊，變成可以輕鬆探索的城市</h1>
+      <p>每座島是一個生活主題，每棟建築收著一類情報。點島嶼開始讀，或直接看今天的更新。</p>
+      <div class="stats"><div><b id="stIsl">6</b><span>座主題島</span></div><div><b id="stAll">0</b><span>則情報</span></div><div><b id="stToday">0</b><span>則今日更新</span></div></div>
+      <div class="row">
+        <button class="btn btn-primary" type="button" id="exploreBtn">探索群島</button>
+        <button class="btn" type="button" id="introToday">查看今日情報</button>
+      </div>
+    </section>
+
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="ctrl" id="ctrl">
+      <button class="btn" type="button" id="homeBtn">⌂ 回到全景</button>
+      <div class="stack"><button type="button" id="zin" aria-label="放大">+</button><button type="button" id="zout" aria-label="縮小">−</button></div>
+    </div>
+
+    <aside class="panel" id="panel" aria-label="情報面板">
+      <div class="panel-head">
+        <button class="btn btn-icon grab" type="button" id="grow" aria-label="展開面板">⌃</button>
+        <span class="spacer"></span>
+        <button class="btn" type="button" id="panelClose">關閉 ×</button>
+      </div>
+      <div class="panel-body" id="panelBody"></div>
+    </aside>
+
+    <div class="loading" id="loading" role="status"><div><div class="hexspin"></div><p>正在搭建群島…</p></div></div>
+    <div class="toast" id="toast" hidden role="status"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+  </main>
+</div>
+
+<div class="modal" id="about" hidden role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+  <div class="modal-box">
+    <h2 id="aboutTitle">關於此原型</h2>
+    <p>這是「生活黑客群島」第一版可操作原型，完成「全景探索 → 點選島嶼 → 閱讀資訊 → 返回原位置」的流程。所有情報都是<b>示範內容</b>，不是即時新聞，也沒有串接真實來源。</p>
+    <h3>操作方式</h3>
+    <ul>
+      <li>桌面：拖曳平移、滾輪縮放、點選島嶼或建築。</li>
+      <li>手機：單指平移、雙指縮放、點選島嶼；面板從底部開啟。</li>
+      <li>鍵盤：Tab 選擇島嶼，方向鍵平移，＋／－縮放，0 回到全景，Esc 關閉面板。</li>
+      <li>不想操作 3D：切換到「清單模式」，可完成所有閱讀與搜尋。</li>
+    </ul>
+    <h3>狀態示範</h3>
+    <p>預覽各種系統狀態，方便設計與開發對齊。</p>
+    <div class="row">
+      <button class="btn" type="button" data-demo="loading">載入中</button>
+      <button class="btn" type="button" data-demo="empty">空資料</button>
+      <button class="btn" type="button" data-demo="syncfail">同步失敗</button>
+      <button class="btn" type="button" data-demo="no3d">3D 不支援</button>
+      <button class="btn" type="button" data-demo="newinfo">新情報提示</button>
+      <button class="btn" type="button" data-demo="reset">恢復正常</button>
+    </div>
+    <div class="row" style="margin-top:18px; justify-content:flex-end"><button class="btn btn-primary" type="button" id="aboutClose">關閉</button></div>
+  </div>
+</div>
+
+<script type="application/json" id="lh-data">
+{
+  "islands": [
+    { "id": "shop", "name": "聰明消費島", "intro": "優惠、比價與訂閱管理，讓每一筆花費都花得明白。", "ground": "#F2DCC6", "accent": "#DD7C5E", "angle": 90,
+      "subs": [ { "id": "deals", "name": "商店", "topic": "優惠", "type": "shop" }, { "id": "compare", "name": "市集", "topic": "比價", "type": "market" }, { "id": "subs", "name": "咖啡館", "topic": "訂閱管理", "type": "cafe" } ] },
+    { "id": "ai", "name": "AI 工具島", "intro": "AI 工具、工作流與實用教學，從會用到用得好。", "ground": "#E4E2D0", "accent": "#5F8591", "angle": 30,
+      "subs": [ { "id": "tools", "name": "創意工作室", "topic": "AI 工具", "type": "studio" }, { "id": "flows", "name": "小型實驗室", "topic": "工作流", "type": "lab" }, { "id": "howto", "name": "教室", "topic": "實用教學", "type": "house" } ] },
+    { "id": "home", "name": "居家生活島", "intro": "收納、家電與空間改善，讓家更好住。", "ground": "#DCE6CF", "accent": "#7F9F86", "angle": -30,
+      "subs": [ { "id": "storage", "name": "住宅", "topic": "收納", "type": "residence" }, { "id": "appliance", "name": "家居店", "topic": "家電", "type": "shop" }, { "id": "space", "name": "花園", "topic": "空間改善", "type": "garden" } ] },
+    { "id": "work", "name": "職場效率島", "intro": "生產力、職涯與協作技巧，把工作做得更輕鬆。", "ground": "#EAE1D1", "accent": "#C49A5C", "angle": -90,
+      "subs": [ { "id": "productivity", "name": "辦公室", "topic": "生產力", "type": "office" }, { "id": "collab", "name": "共享工作空間", "topic": "協作技巧", "type": "cowork" }, { "id": "career", "name": "職涯塔", "topic": "職涯", "type": "tower" } ] },
+    { "id": "city", "name": "城市探索島", "intro": "交通、活動與在地情報，出門前先看一眼。", "ground": "#D7E4D2", "accent": "#7FA2AF", "angle": -150,
+      "subs": [ { "id": "transit", "name": "車站", "topic": "交通", "type": "station" }, { "id": "events", "name": "活動廣場", "topic": "活動", "type": "plaza" }, { "id": "local", "name": "公園", "topic": "在地情報", "type": "park" } ] },
+    { "id": "safety", "name": "數位安全島", "intro": "防詐、隱私與帳號安全，替你的數位生活守門。", "ground": "#DDE4E2", "accent": "#B65A3E", "angle": 150,
+      "subs": [ { "id": "scam", "name": "燈塔", "topic": "防詐", "type": "lighthouse" }, { "id": "account", "name": "守望站", "topic": "帳號安全", "type": "watch" }, { "id": "privacy", "name": "小屋", "topic": "隱私", "type": "house" } ] }
+  ],
+  "items": [
+    { "id": "s1", "island": "shop", "sub": "subs", "imp": "high", "pubH": 30, "updH": 2, "tags": ["訂閱", "省錢"], "title": "訂閱一次盤點：三步驟找出沒在用的月費", "summary": "把信用卡帳單、App 商店與電子信箱的扣款紀錄放在一起看，通常能找出一兩筆忘了取消的訂閱。", "why": "小額訂閱單筆不顯眼，累積起來卻是固定支出；年費方案到期前也常自動續約。", "action": "今晚花 15 分鐘列出所有訂閱，標記三個月內沒用過的項目，到期前取消或改月繳。" },
+    { "id": "s2", "island": "shop", "sub": "compare", "imp": "mid", "pubH": 52, "updH": 20, "tags": ["比價", "網購"], "title": "比價前先比「到手價」：運費、點數與退貨條件", "summary": "標價最低不一定最划算，把運費、回饋點數的實際價值與退貨成本算進去，排序常會改變。", "why": "多數平台把運費與點數放在結帳最後一步才顯示，容易只看標價做決定。", "action": "下次比價時，用同一張表記錄標價、運費、點數與退貨期限，再比總額。" },
+    { "id": "s3", "island": "shop", "sub": "deals", "imp": "low", "pubH": 120, "updH": 96, "tags": ["優惠", "信用卡"], "title": "優惠活動怎麼看：登錄、上限與排除條款", "summary": "許多回饋活動需要先登錄，並設有每月回饋上限與排除通路，先讀這三項再刷卡。", "why": "沒登錄或超過上限，回饋就不會入帳，事後很難補救。", "action": "把常用卡片的登錄期限記在行事曆，並截圖保存活動條款。" },
+    { "id": "a1", "island": "ai", "sub": "flows", "imp": "high", "pubH": 26, "updH": 4, "tags": ["工作流", "會議"], "title": "會議記錄工作流：錄音、摘要、待辦一次完成", "summary": "先取得與會者同意再錄音，交給 AI 產生摘要與待辦清單，最後由主持人確認後寄出。", "why": "會議後整理記錄最花時間；但 AI 摘要可能漏掉決策細節，必須有人把關。", "action": "下一場例會試用一次，對照自己的筆記，找出 AI 摘要漏掉的地方。" },
+    { "id": "a2", "island": "ai", "sub": "tools", "imp": "mid", "pubH": 70, "updH": 30, "tags": ["AI 工具", "選擇"], "title": "挑 AI 工具前先問四個問題", "summary": "要解決什麼任務、資料會不會被拿去訓練、能不能匯出、付費前有沒有試用，比功能清單更重要。", "why": "工具更新很快，先確認資料政策與退場方式，換工具時才不會被綁住。", "action": "把正在考慮的工具填進四欄比較表，資料政策不清楚的先不要放公司資料。" },
+    { "id": "a3", "island": "ai", "sub": "howto", "imp": "low", "pubH": 200, "updH": 150, "tags": ["教學", "提示詞"], "title": "寫好提示詞的基本結構：角色、任務、限制、格式", "summary": "清楚說明要 AI 扮演誰、完成什麼、有哪些限制、輸出成什麼格式，結果會穩定許多。", "why": "多數不理想的回答，來自需求描述太模糊，而不是工具不夠好。", "action": "把一個常用的提示詞改寫成四段結構，比較前後差異。" },
+    { "id": "h1", "island": "home", "sub": "storage", "imp": "mid", "pubH": 28, "updH": 6, "tags": ["收納", "換季"], "title": "換季收納：先分三堆，再決定放哪裡", "summary": "把衣物分成「這季會穿」「下季再穿」「可以送出」三堆，最後才買收納用品。", "why": "先買收納盒再整理，常會買錯尺寸，也讓不需要的東西繼續占空間。", "action": "這個週末先處理一個衣櫃抽屜，量好尺寸再決定要不要買收納盒。" },
+    { "id": "h2", "island": "home", "sub": "appliance", "imp": "low", "pubH": 160, "updH": 160, "tags": ["家電", "保養"], "title": "家電保養月曆：濾網、除垢與排水孔", "summary": "冷氣濾網、熱水瓶除垢、洗衣機排水孔，各有建議的清潔頻率，寫進月曆比較不會忘。", "why": "定期保養可以維持效能、減少耗電，也能避免異味與故障。", "action": "依家中家電建立一張保養清單，設定每月第一個週六提醒。" },
+    { "id": "h3", "island": "home", "sub": "space", "imp": "mid", "pubH": 90, "updH": 40, "tags": ["空間", "動線"], "title": "小空間改善：先畫動線，再搬家具", "summary": "記錄一天中最常走的路線，讓主要動線保持淨空，家具沿牆配置，空間會明顯變寬。", "why": "空間感覺擁擠，多半是動線被打斷，而不是坪數太小。", "action": "用紙筆畫出客廳平面與一天的走動路線，找出一個最常繞路的地方。" },
+    { "id": "w1", "island": "work", "sub": "productivity", "imp": "high", "pubH": 22, "updH": 3, "tags": ["生產力", "專注"], "title": "每天第一小時：先做最重要的一件事", "summary": "上班後先處理需要深度思考的工作，把回信與訊息集中到固定時段。", "why": "一早被訊息打斷，重要工作容易一路拖到下班前。", "action": "明天前一晚寫下最重要的一件事，早上先關通知 60 分鐘。" },
+    { "id": "w2", "island": "work", "sub": "collab", "imp": "mid", "pubH": 75, "updH": 26, "tags": ["協作", "溝通"], "title": "交辦工作的一句話範本：背景、產出、期限、標準", "summary": "交代任務時說清楚為什麼做、要交什麼、何時交、怎樣算完成，可以減少來回確認。", "why": "多數返工來自對「完成」的想像不同。", "action": "下一次交辦工作時，用這四個欄位寫在訊息裡。" },
+    { "id": "w3", "island": "work", "sub": "career", "imp": "low", "pubH": 300, "updH": 220, "tags": ["職涯", "履歷"], "title": "每季更新一次成果紀錄", "summary": "把每季完成的專案、數字與回饋記下來，寫履歷或年度考核時就不用從頭回想。", "why": "成果發生時最容易描述清楚，過了半年細節就模糊了。", "action": "建立一份成果紀錄文件，先補上這一季的三件事。" },
+    { "id": "c1", "island": "city", "sub": "transit", "imp": "high", "pubH": 12, "updH": 1, "tags": ["交通", "出門前"], "title": "出門前的三個檢查：路況、班次、替代路線", "summary": "尖峰時段出門前，先看即時路況與班次，並準備一條替代路線，遇到延誤時不慌張。", "why": "交通狀況每天不同，提前五分鐘查看可以省下更多等待時間。", "action": "把常用路線的即時查詢頁加到手機主畫面。" },
+    { "id": "c2", "island": "city", "sub": "events", "imp": "mid", "pubH": 48, "updH": 18, "tags": ["活動", "週末"], "title": "找週末活動的方法：官方行事曆與場館公告", "summary": "城市與場館的官方活動行事曆資訊最完整，也會公告異動與取消。", "why": "轉傳的活動資訊常常過期，出發前以官方公告為準。", "action": "訂閱兩個常去場館的官方公告，週五晚上看一次。" },
+    { "id": "c3", "island": "city", "sub": "local", "imp": "low", "pubH": 140, "updH": 100, "tags": ["在地", "公園"], "title": "社區公園使用須知：開放時間與預約設施", "summary": "部分運動場與烤肉區需要預約，也有固定的維護休園時段。", "why": "到了現場才發現要預約或正在維護，就白跑一趟。", "action": "查看離家最近的公園有哪些設施需要預約，存下預約頁面。" },
+    { "id": "d1", "island": "safety", "sub": "scam", "imp": "high", "pubH": 18, "updH": 1, "tags": ["防詐", "簡訊"], "title": "收到「包裹無法投遞」簡訊，先不要點連結", "summary": "這類簡訊常以補繳運費為由，引導到假網站輸入卡號。請從物流業者的官方 App 或網站自行查詢。", "why": "假網站外觀與官方網站幾乎一樣，輸入卡號後很快就會被盜刷。", "action": "刪除可疑簡訊；若已輸入卡號，立即聯絡發卡銀行停卡，並撥打 165 反詐騙專線。" },
+    { "id": "d2", "island": "safety", "sub": "account", "imp": "high", "pubH": 40, "updH": 8, "tags": ["帳號", "兩步驟驗證"], "title": "替三個最重要的帳號開啟兩步驟驗證", "summary": "電子信箱、網路銀行與主要社群帳號一旦被盜，影響最大，優先開啟兩步驟驗證。", "why": "密碼外洩很常見，兩步驟驗證能擋下大多數盜用嘗試。", "action": "今天先處理電子信箱，並把備用碼存放在安全的地方。" },
+    { "id": "d3", "island": "safety", "sub": "privacy", "imp": "mid", "pubH": 110, "updH": 60, "tags": ["隱私", "App 權限"], "title": "每月檢查一次 App 權限", "summary": "到手機設定中檢查定位、相機、麥克風與聯絡人權限，關掉不需要的授權。", "why": "許多 App 在安裝時取得權限後，就一直保留著。", "action": "先檢查定位權限，把不需要背景定位的 App 改為「使用期間」。" }
+  ],
+  "incoming": { "id": "d4", "island": "safety", "sub": "scam", "imp": "high", "pubH": 0, "updH": 0, "tags": ["防詐", "投資"], "title": "「保證獲利」的投資群組邀請，一律先查證", "summary": "陌生人邀請加入投資群組、宣稱保證獲利或要求下載不明 App，都是常見的詐騙手法。", "why": "這類詐騙常先讓你小賺取得信任，再要求大額投入。", "action": "不要下載對方提供的 App；向 165 或金融主管機關的公開資訊查證平台與業者。" }
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+let reduce = reduceMQ.matches;
+reduceMQ.addEventListener && reduceMQ.addEventListener('change', e => { reduce = e.matches; });
+const narrow = () => window.innerWidth <= 760;
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+/* ---------- data ---------- */
+const RAW = JSON.parse($('#lh-data').textContent);
+const NOW0 = Date.now();
+const H = 3600e3;
+const ISL = RAW.islands;
+const islById = Object.fromEntries(ISL.map(i => [i.id, i]));
+const subById = {}; ISL.forEach(i => i.subs.forEach(s => { subById[i.id + ':' + s.id] = s; }));
+function hydrate(it) { return Object.assign({}, it, { published: new Date(NOW0 - it.pubH * H), updated: new Date(NOW0 - it.updH * H), demo: true, source: '示範來源・生活黑客編輯室', url: null }); }
+let ITEMS = RAW.items.map(hydrate);
+let EMPTY_DEMO = false;
+const items = () => EMPTY_DEMO ? [] : ITEMS;
+
+const state = { mode: 'city', q: '', topic: 'all', since: 'all', panel: null, island: null, sub: 'all', card: null, cardFrom: null };
+let lastSync = new Date(NOW0); let syncState = 'ok';
+
+const IMP = { high: ['▲', '重要'], mid: ['●', '關注'], low: ['○', '一般'] };
+const IMP_ORDER = { high: 0, mid: 1, low: 2 };
+const TIMES = [['all', '全部'], ['today', '今天'], ['7d', '7 天內'], ['30d', '30 天內']];
+const pad = n => String(n).padStart(2, '0');
+const fmtAbs = d => `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtClock = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function fmtRel(d) { const m = Math.round((Date.now() - d) / 60000); if (m < 1) return '剛剛'; if (m < 60) return `${m} 分鐘前`; const h = Math.round(m / 60); if (h < 24) return `${h} 小時前`; return `${Math.round(h / 24)} 天前`; }
+const isToday = d => { const n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); };
+const isNew = it => Date.now() - it.updated < 24 * H;
+
+function matches(it, ignoreTopic) {
+  if (!ignoreTopic && state.topic !== 'all' && it.island !== state.topic) return false;
+  if (state.since === 'today' && !isToday(it.updated)) return false;
+  if (state.since === '7d' && Date.now() - it.updated > 7 * 24 * H) return false;
+  if (state.since === '30d' && Date.now() - it.updated > 30 * 24 * H) return false;
+  const q = state.q.trim().toLowerCase();
+  if (q) { const s = subById[it.island + ':' + it.sub]; const hay = [it.title, it.summary, it.why, it.action, it.tags.join(' '), islById[it.island].name, s.name, s.topic].join(' ').toLowerCase(); if (!q.split(/\s+/).every(w => hay.includes(w))) return false; }
+  return true;
+}
+const sortItems = arr => arr.slice().sort((a, b) => IMP_ORDER[a.imp] - IMP_ORDER[b.imp] || b.updated - a.updated);
+const filtering = () => state.q.trim() !== '' || state.topic !== 'all' || state.since !== 'all';
+function islandStats(id, onlyMatching) { const arr = items().filter(it => it.island === id && (!onlyMatching || matches(it, true))); const latest = arr.reduce((m, it) => it.updated > m ? it.updated : m, new Date(0)); return { n: arr.length, nNew: arr.filter(isNew).length, latest: arr.length ? latest : null }; }
+
+/* ---------- rendering: cards, panel, list ---------- */
+function impBadge(it) { const [ic, t] = IMP[it.imp]; return `<span class="imp ${it.imp}"><span aria-hidden="true">${ic}</span>${t}</span>`; }
+function cardHTML(it, showWhere) {
+  const isl = islById[it.island], s = subById[it.island + ':' + it.sub];
+  return `<button class="icard" type="button" data-card="${it.id}">
+    <span class="foot">${impBadge(it)}${showWhere ? `<span class="where">${esc(isl.name)}・${esc(s.topic)}</span>` : `<span class="where">${esc(s.name)}・${esc(s.topic)}</span>`}${isNew(it) ? '<span class="tag">新</span>' : ''}</span>
+    <h3>${esc(it.title)}</h3><p>${esc(it.summary)}</p>
+    <span class="foot">${it.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join('')}<span>更新 ${fmtRel(it.updated)}</span></span></button>`;
+}
+function emptyHTML(msg) {
+  return `<div class="empty"><h3>${EMPTY_DEMO ? '目前還沒有情報' : '找不到符合的情報'}</h3><p>${msg || (EMPTY_DEMO ? '資料同步完成後，新情報會出現在這裡。' : '試試其他關鍵字，或放寬主題與更新時間。')}</p>${EMPTY_DEMO ? '' : '<button class="btn" type="button" data-act="clearfilters">清除搜尋與篩選</button>'}</div>`;
+}
+
+const panel = $('#panel'), body = $('#panelBody');
+let returnFocus = null;
+function openPanel(kind, opts = {}) {
+  const wasOpen = panel.classList.contains('open');
+  if (!wasOpen) returnFocus = opts.from || document.activeElement;
+  state.panel = kind; Object.assign(state, opts.patch || {});
+  renderPanel(); panel.classList.add('open'); layoutCtrl();
+  requestAnimationFrame(() => { const h = body.querySelector('[data-focus]'); h && h.focus({ preventScroll: true }); });
+}
+function closePanel() {
+  if (!panel.classList.contains('open')) return;
+  panel.classList.remove('open', 'tall'); const wasIsland = state.island;
+  state.panel = null; state.island = null; state.card = null; state.sub = 'all';
+  layoutCtrl(); updateLabels(); scene3d && scene3d.restoreView();
+  if (wasIsland) scene3d && scene3d.select(null);
+  const rf = returnFocus; returnFocus = null; if (rf && document.contains(rf)) rf.focus({ preventScroll: true });
+}
+function renderPanel() {
+  body.scrollTop = 0;
+  if (state.card) return renderDetail();
+  if (state.panel === 'island') {
+    const isl = islById[state.island], st = islandStats(isl.id);
+    let arr = sortItems(items().filter(it => it.island === isl.id && matches(it, true)));
+    const subArr = state.sub === 'all' ? arr : arr.filter(it => it.sub === state.sub);
+    body.innerHTML = `<div class="p-eyebrow"><span aria-hidden="true" style="color:${isl.accent}">⬢</span> 主題島</div>
+      <h2 class="p-title" tabindex="-1" data-focus>${esc(isl.name)}</h2><p class="p-lead">${esc(isl.intro)}</p>
+      <div class="p-meta"><span>共 <b>${st.n}</b> 則</span><span>今日新增或更新 <b>${st.nNew}</b> 則</span><span>最近更新 <b>${st.latest ? fmtRel(st.latest) : '—'}</b></span></div>
+      ${filtering() ? `<p class="note" style="margin:-4px 0 12px">目前套用搜尋或篩選，顯示 ${arr.length} 則符合的情報。</p>` : ''}
+      <div class="subs" role="group" aria-label="建築與子主題"><button class="chip" type="button" data-sub="all" aria-pressed="${state.sub === 'all'}">全部 ${arr.length}</button>${isl.subs.map(s => `<button class="chip" type="button" data-sub="${s.id}" aria-pressed="${state.sub === s.id}">${esc(s.name)}・${esc(s.topic)} ${arr.filter(it => it.sub === s.id).length}</button>`).join('')}</div>
+      <div class="cards">${subArr.length ? subArr.map(it => cardHTML(it, false)).join('') : emptyHTML()}</div>`;
+  } else if (state.panel === 'today') {
+    const arr = sortItems(items().filter(it => isToday(it.updated)));
+    body.innerHTML = `<div class="p-eyebrow"><span aria-hidden="true">✦</span> 今日情報・${fmtAbs(new Date()).slice(0, 10)}</div>
+      <h2 class="p-title" tabindex="-1" data-focus>今天值得關注的更新</h2>
+      <p class="p-lead">依重要程度與更新時間排序。點卡片閱讀，關閉後回到原本的位置。</p>
+      <div class="cards">${arr.length ? arr.map(it => cardHTML(it, true)).join('') : emptyHTML('今天還沒有新的更新。')}</div>`;
+  } else if (state.panel === 'search') {
+    const arr = sortItems(items().filter(it => matches(it)));
+    const desc = [state.q.trim() && `「${esc(state.q.trim())}」`, state.topic !== 'all' && esc(islById[state.topic].name), state.since !== 'all' && TIMES.find(t => t[0] === state.since)[1]].filter(Boolean).join('・');
+    body.innerHTML = `<div class="p-eyebrow">搜尋與篩選</div>
+      <h2 class="p-title" tabindex="-1" data-focus>${arr.length} 則符合的情報</h2><p class="p-lead">${desc || '全部情報'}</p>
+      <div class="cards">${arr.length ? arr.map(it => cardHTML(it, true)).join('') : emptyHTML()}</div>`;
+  }
+}
+function renderDetail() {
+  const it = items().find(x => x.id === state.card); if (!it) { state.card = null; return renderPanel(); }
+  const isl = islById[it.island], s = subById[it.island + ':' + it.sub];
+  const backLbl = state.cardFrom === 'today' ? '今日情報' : state.cardFrom === 'search' ? '搜尋結果' : state.cardFrom === 'list' ? null : isl.name;
+  body.innerHTML = `<article class="detail">
+    ${backLbl ? `<button class="btn back" type="button" data-act="back">← 返回${esc(backLbl)}</button>` : ''}
+    <div class="foot" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${impBadge(it)}<span class="where">${esc(isl.name)}・${esc(s.name)}・${esc(s.topic)}</span></div>
+    <h2 tabindex="-1" data-focus>${esc(it.title)}</h2>
+    <p class="sum">${esc(it.summary)}</p>
+    <dl class="facts"><dt>主題標籤</dt><dd>${it.tags.map(t => '#' + esc(t)).join('　')}</dd><dt>資訊來源</dt><dd>${esc(it.source)}</dd><dt>發布時間</dt><dd>${fmtAbs(it.published)}</dd><dt>內容更新</dt><dd>${fmtAbs(it.updated)}（${fmtRel(it.updated)}）</dd></dl>
+    <h3>為什麼值得關注</h3><p style="margin:0">${esc(it.why)}</p>
+    <h3>可以採取的行動</h3><p class="act">${esc(it.action)}</p>
+    <div class="src"><span class="btn" role="link" aria-disabled="true" style="justify-content:center">查看原始來源 ↗</span><span class="note">此為示範內容，沒有原始來源，也不是即時新聞。串接真實資料後，這裡會連到原始報導或官方頁面。</span></div>
+  </article>`;
+}
+body.addEventListener('click', e => {
+  const c = e.target.closest('[data-card]'); if (c) { state.cardFrom = state.panel; state.card = c.dataset.card; renderPanel(); focusHead(); return; }
+  const sb = e.target.closest('[data-sub]'); if (sb) { state.sub = sb.dataset.sub; renderPanel(); body.querySelector(`[data-sub="${state.sub}"]`).focus(); scene3d && scene3d.select(state.island, state.sub === 'all' ? null : state.sub); return; }
+  const a = e.target.closest('[data-act]'); if (!a) return;
+  if (a.dataset.act === 'back') { state.card = null; renderPanel(); focusHead(); }
+  if (a.dataset.act === 'clearfilters') clearFilters();
+});
+const focusHead = () => requestAnimationFrame(() => { const h = body.querySelector('[data-focus]'); h && h.focus({ preventScroll: true }); });
+
+function renderList() {
+  const el = $('#list'); const arr = sortItems(items().filter(it => matches(it)));
+  const groups = ISL.map(isl => [isl, arr.filter(it => it.island === isl.id)]).filter(g => g[1].length);
+  el.innerHTML = `<div class="list-inner"><div class="list-sum"><h2>${filtering() ? `${arr.length} 則符合的情報` : '全部情報'}</h2><span>${filtering() ? '城市模式與清單模式共用同一組搜尋與篩選' : `${ISL.length} 座主題島・依重要程度與更新時間排序`}</span></div>
+    ${groups.length ? groups.map(([isl, list]) => `<section class="group" aria-labelledby="g-${isl.id}"><div class="group-h"><span class="hex" style="background:${isl.accent}" aria-hidden="true"></span><h3 id="g-${isl.id}">${esc(isl.name)}</h3><span>${list.length} 則・${esc(isl.intro)}</span></div><div class="grid">${list.map(it => cardHTML(it, false)).join('')}</div></section>`).join('') : emptyHTML()}</div>`;
+}
+$('#list').addEventListener('click', e => {
+  const c = e.target.closest('[data-card]'); if (c) { returnFocus = c; state.card = c.dataset.card; state.cardFrom = 'list'; openPanel('card', { from: c }); return; }
+  const a = e.target.closest('[data-act="clearfilters"]'); if (a) clearFilters();
+});
+
+/* ---------- filters & search ---------- */
+function renderChips() {
+  $('#topicChips').innerHTML = `<button class="chip" type="button" data-topic="all" aria-pressed="${state.topic === 'all'}">全部</button>` + ISL.map(i => `<button class="chip" type="button" data-topic="${i.id}" aria-pressed="${state.topic === i.id}"><span class="dot" style="background:${i.accent}" aria-hidden="true"></span>${esc(i.name)}</button>`).join('');
+  $('#timeChips').innerHTML = TIMES.map(([k, t]) => `<button class="chip" type="button" data-since="${k}" aria-pressed="${state.since === k}">${t}</button>`).join('');
+}
+$('#topicChips').addEventListener('click', e => { const b = e.target.closest('[data-topic]'); if (!b) return; state.topic = b.dataset.topic; onFilter(); });
+$('#timeChips').addEventListener('click', e => { const b = e.target.closest('[data-since]'); if (!b) return; state.since = b.dataset.since; onFilter(); });
+let qT; $('#q').addEventListener('input', e => { state.q = e.target.value; $('#qClear').hidden = !state.q; clearTimeout(qT); qT = setTimeout(onFilter, 180); });
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(qT); onFilter(true); } });
+$('#qClear').addEventListener('click', () => { $('#q').value = ''; state.q = ''; $('#qClear').hidden = true; onFilter(); $('#q').focus(); });
+function clearFilters() { state.q = ''; state.topic = 'all'; state.since = 'all'; $('#q').value = ''; $('#qClear').hidden = true; onFilter(); }
+function onFilter(fromEnter) {
+  renderChips(); updateLabels(); scene3d && scene3d.applyFilter();
+  const n = items().filter(it => matches(it)).length; announce(filtering() ? `${n} 則符合的情報` : '已清除篩選');
+  if (state.mode === 'list') { renderList(); if (state.panel) renderPanel(); return; }
+  if (state.card) return;
+  if (state.panel === 'island') { renderPanel(); return; }
+  if (filtering()) { if (state.panel !== 'search') openPanel('search', { from: fromEnter ? $('#q') : document.activeElement }); else renderPanel(); }
+  else if (state.panel === 'search') closePanel();
+}
+const announce = t => { const l = $('#live'); l.textContent = ''; setTimeout(() => { l.textContent = t; }, 30); };
+
+/* ---------- island labels & tooltip ---------- */
+const labelsEl = $('#labels'); const labelEls = {};
+function buildLabels() {
+  labelsEl.innerHTML = '';
+  const hub = document.createElement('button'); hub.type = 'button'; hub.className = 'isl-label hub'; hub.dataset.island = 'hub';
+  labelsEl.appendChild(hub); labelEls.hub = hub;
+  ISL.forEach(i => { const b = document.createElement('button'); b.type = 'button'; b.className = 'isl-label'; b.dataset.island = i.id; labelsEl.appendChild(b); labelEls[i.id] = b; });
+  updateLabels();
+}
+function updateLabels() {
+  const todayN = items().filter(it => isToday(it.updated)).length;
+  if (labelEls.hub) { labelEls.hub.innerHTML = `<span class="n">今日情報塔</span><span class="m"><span class="new">今日 ${todayN} 則</span></span>`; labelEls.hub.setAttribute('aria-label', `今日情報塔，今日 ${todayN} 則更新，開啟今日情報`); }
+  ISL.forEach(i => {
+    const b = labelEls[i.id]; if (!b) return; const st = islandStats(i.id), fm = islandStats(i.id, true); const f = filtering();
+    const cnt = f ? `${fm.n} 則符合` : `${st.n} 則`;
+    b.innerHTML = `<span class="n">${esc(i.name)}</span><span class="m"><span>${cnt}</span>${!f && st.nNew ? `<span class="new">新 ${st.nNew}</span>` : ''}</span>`;
+    b.setAttribute('aria-label', `${i.name}，${cnt}${st.nNew ? `，${st.nNew} 則今日新增或更新` : ''}，開啟主題`);
+    b.dataset.dim = String(f && (fm.n === 0 || (state.topic !== 'all' && state.topic !== i.id)));
+    b.dataset.active = String(state.island === i.id);
+  });
+  $('#stAll').textContent = items().length; $('#stToday').textContent = todayN;
+}
+labelsEl.addEventListener('click', e => { const b = e.target.closest('[data-island]'); if (!b) return; b.dataset.island === 'hub' ? openToday(b) : selectIsland(b.dataset.island, null, b); });
+const tip = $('#tip');
+function showTip(id, x, y) {
+  if (!id || id === 'hub' || narrow()) { tip.hidden = true; return; }
+  const i = islById[id], st = islandStats(id);
+  tip.innerHTML = `<h3>${esc(i.name)}</h3><p>${esc(i.intro)}</p><div class="meta"><span>${st.n} 則情報</span><span>最近更新 ${st.latest ? fmtRel(st.latest) : '—'}</span></div><div class="hint">點選以開啟主題</div>`;
+  tip.hidden = false; const r = $('#stage').getBoundingClientRect();
+  tip.style.left = Math.min(r.width - 266, Math.max(8, x + 16)) + 'px'; tip.style.top = Math.min(r.height - 150, Math.max(8, y + 16)) + 'px';
+}
+labelsEl.addEventListener('pointerover', e => { const b = e.target.closest('[data-island]'); if (b) { const rr = b.getBoundingClientRect(), sr = $('#stage').getBoundingClientRect(); showTip(b.dataset.island, rr.right - sr.left - 10, rr.top - sr.top); scene3d && scene3d.hover(b.dataset.island === 'hub' ? null : b.dataset.island); } });
+labelsEl.addEventListener('pointerout', e => { if (e.target.closest('[data-island]')) { tip.hidden = true; scene3d && scene3d.hover(null); } });
+labelsEl.addEventListener('focusin', e => { const b = e.target.closest('[data-island]'); if (b) { const rr = b.getBoundingClientRect(), sr = $('#stage').getBoundingClientRect(); showTip(b.dataset.island, rr.right - sr.left - 10, rr.top - sr.top); scene3d && scene3d.hover(b.dataset.island === 'hub' ? null : b.dataset.island); } });
+labelsEl.addEventListener('focusout', () => { tip.hidden = true; scene3d && scene3d.hover(null); });
+
+function selectIsland(id, sub, from) {
+  hideIntro();
+  state.card = null; state.island = id; state.sub = sub || 'all';
+  openPanel('island', { from });
+  updateLabels(); scene3d && scene3d.select(id, sub); scene3d && scene3d.focusIsland(id);
+}
+function openToday(from) { hideIntro(); state.card = null; state.island = null; scene3d && scene3d.select(null); openPanel('today', { from }); updateLabels(); }
+
+/* ---------- chrome ---------- */
+function hideIntro() { const el = $('#intro'); if (!el.hidden) { el.hidden = true; store.set('lh-intro', '1'); } }
+$('#introClose').addEventListener('click', () => { hideIntro(); $('#stage').focus(); });
+$('#exploreBtn').addEventListener('click', () => { hideIntro(); const f = labelEls[ISL[0].id]; f ? f.focus() : $('#stage').focus(); });
+$('#introToday').addEventListener('click', e => openToday(e.currentTarget));
+$('#todayBtn').addEventListener('click', e => openToday(e.currentTarget));
+$('#panelClose').addEventListener('click', closePanel);
+$('#grow').addEventListener('click', () => { panel.classList.toggle('tall'); $('#grow').textContent = panel.classList.contains('tall') ? '⌄' : '⌃'; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#about').hidden) return closeAbout(); if (state.card && state.cardFrom !== 'list') { state.card = null; renderPanel(); focusHead(); } else closePanel(); } });
+function layoutCtrl() { const c = $('#ctrl'); c.style.right = (!narrow() && panel.classList.contains('open')) ? `calc(${panel.offsetWidth}px + 16px)` : ''; }
+window.addEventListener('resize', layoutCtrl);
+
+function setMode(m) {
+  state.mode = m; $('#mCity').setAttribute('aria-pressed', m === 'city'); $('#mList').setAttribute('aria-pressed', m === 'list');
+  const city = m === 'city'; $('#stage').hidden = !city; $('#list').hidden = city; $('#ctrl').hidden = !city || !scene3d; $('#intro').hidden = !city || store.get('lh-intro') === '1' || $('#intro').dataset.gone === '1';
+  if (!city) { if (state.panel && state.panel !== 'card') closePanel(); renderList(); scene3d && scene3d.pause(true); }
+  else { if (state.panel === 'card') closePanel(); scene3d && scene3d.pause(false); if (filtering()) openPanel('search'); }
+  announce(city ? '已切換為城市模式' : '已切換為清單模式');
+}
+$('#mCity').addEventListener('click', () => { if (!scene3d) { announce('此裝置無法顯示 3D，請使用清單模式'); showFallbackNote(); return; } setMode('city'); });
+$('#mList').addEventListener('click', () => setMode('list'));
+
+function renderStatus() {
+  const s = $('#status');
+  const sync = syncState === 'syncing' ? `<span class="pill">同步中…</span>` : syncState === 'error' ? `<span class="pill err">同步失敗・顯示 ${fmtClock(lastSync)} 的資料 <button type="button" data-sync>重試</button></span>` : `<span class="pill">系統最後同步 ${fmtClock(lastSync)} <button type="button" data-sync>重新同步</button></span>`;
+  s.innerHTML = `<span class="pill demo">示範資料</span>${sync}`;
+}
+$('#status').addEventListener('click', e => { if (e.target.closest('[data-sync]')) { syncState = 'syncing'; renderStatus(); setTimeout(() => { if (FAIL_DEMO) { syncState = 'error'; } else { syncState = 'ok'; lastSync = new Date(); } renderStatus(); announce(syncState === 'ok' ? '同步完成' : '同步失敗，顯示的是上次同步的資料'); }, 900); } });
+let FAIL_DEMO = false;
+
+/* new-info toast: low interruption, never moves the camera */
+let incomingDone = false;
+function deliverIncoming() {
+  if (incomingDone) return; incomingDone = true;
+  const it = hydrate(RAW.incoming); it.updated = new Date(); it.published = new Date(); ITEMS.unshift(it); lastSync = new Date();
+  renderStatus(); updateLabels(); scene3d && scene3d.refreshMarkers(); if (state.mode === 'list') renderList(); if (state.panel && !state.card) renderPanel();
+  const t = $('#toast'); t.innerHTML = `<span><b>新情報</b>・${esc(islById[it.island].name)}：${esc(it.title)}</span><button class="btn" type="button" data-open="${it.id}">查看</button><button class="x" type="button" aria-label="關閉提示">×</button>`; t.hidden = false;
+  clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 12000);
+}
+$('#toast').addEventListener('click', e => { const t = $('#toast'); if (e.target.closest('.x')) { t.hidden = true; return; } const o = e.target.closest('[data-open]'); if (o) { t.hidden = true; state.card = o.dataset.open; state.cardFrom = state.mode === 'list' ? 'list' : 'today'; if (state.mode === 'list') openPanel('card', { from: $('#todayBtn') }); else { state.panel = 'today'; openPanel('today', { from: $('#todayBtn'), patch: { card: o.dataset.open } }); } } });
+setTimeout(deliverIncoming, 40000);
+
+/* about & state demos */
+function openAbout() { $('#about').hidden = false; $('#aboutClose').focus(); }
+function closeAbout() { $('#about').hidden = true; $('#aboutBtn').focus(); }
+$('#aboutBtn').addEventListener('click', openAbout); $('#aboutClose').addEventListener('click', closeAbout);
+$('#about').addEventListener('click', e => {
+  if (e.target === $('#about')) return closeAbout();
+  const d = e.target.closest('[data-demo]'); if (!d) return; const k = d.dataset.demo;
+  if (k === 'loading') { closeAbout(); const l = $('#loading'); l.hidden = false; setTimeout(() => { l.hidden = true; }, 1800); }
+  if (k === 'empty') { EMPTY_DEMO = true; closeAbout(); refreshAll(); }
+  if (k === 'syncfail') { FAIL_DEMO = true; syncState = 'error'; renderStatus(); closeAbout(); }
+  if (k === 'no3d') { closeAbout(); showFallbackNote(); setMode('list'); }
+  if (k === 'newinfo') { closeAbout(); incomingDone = false; ITEMS = ITEMS.filter(x => x.id !== RAW.incoming.id); deliverIncoming(); }
+  if (k === 'reset') { EMPTY_DEMO = false; FAIL_DEMO = false; syncState = 'ok'; lastSync = new Date(); renderStatus(); closeAbout(); refreshAll(); }
+});
+function refreshAll() { updateLabels(); scene3d && scene3d.refreshMarkers(); scene3d && scene3d.applyFilter(); renderChips(); if (state.mode === 'list') renderList(); if (state.panel) renderPanel(); }
+function showFallbackNote() { const t = $('#toast'); t.innerHTML = `<span>此裝置無法顯示 3D 群島，已改用清單模式。所有情報、搜尋與篩選都能正常使用。</span><button class="x" type="button" aria-label="關閉提示">×</button>`; t.hidden = false; }
+
+/* ---------- 3D scene ---------- */
+let scene3d = null;
+function makeScene() {
+  if (!window.THREE) throw new Error('three missing');
+  const T = THREE, stage = $('#stage');
+  const renderer = new T.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'low-power' });
+  if (!renderer.getContext()) throw new Error('no webgl');
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.setClearColor(0xF3ECE0);
+  stage.insertBefore(renderer.domElement, stage.firstChild);
+  renderer.domElement.setAttribute('aria-hidden', 'true');
+
+  const scene = new T.Scene();
+  const cam = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+  const OFFSET = new T.Vector3(13, 12.5, 13);
+  const view = { target: new T.Vector3(0, 0, 0), zoom: 1 };
+  let baseH = 17;
+
+  scene.add(new T.HemisphereLight(0xFFF6E8, 0xB9A88E, 0.5));
+  const sun = new T.DirectionalLight(0xFFEFD8, 0.62); sun.position.set(9, 16, 5); sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, near: 1, far: 50 }); sun.shadow.bias = -0.0006; sun.shadow.radius = 4;
+  scene.add(sun);
+
+  const mats = {}; const M = (c, o) => { const k = c + (o ? JSON.stringify(o) : ''); return mats[k] || (mats[k] = new T.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.9, metalness: 0 }, o || {}))); };
+  const mesh = (g, c, o) => { const m = new T.Mesh(g, M(c, o)); m.castShadow = true; m.receiveShadow = true; return m; };
+  const box = (w, h, d, c) => mesh(new T.BoxGeometry(w, h, d), c);
+  const cyl = (rt, rb, h, c, seg) => mesh(new T.CylinderGeometry(rt, rb, h, seg || 20), c);
+  const C = { cream: '#FBF6EC', beige: '#E8D8BF', sand: '#E6D3B4', wood: '#C59A6E', woodD: '#9C7550', sage: '#8FAE8B', sageD: '#6E8F74', coral: '#DD7C5E', coralL: '#EBA287', sea: '#A9C4CB', seaD: '#7FA2AF', ink: '#5A5148', glass: '#BCD3D6', mustard: '#D9B26A' };
+
+  // table: hex water board
+  const table = new T.Group(); scene.add(table);
+  const board = cyl(12.6, 12.9, 0.7, '#CDB497', 6); board.position.y = -0.55; board.rotation.y = Math.PI / 6; table.add(board);
+  const water = new T.Mesh(new T.CylinderGeometry(12.3, 12.3, 0.3, 6, 1), M('#A5C3CA', { roughness: 0.8 })); water.position.y = -0.12; water.rotation.y = Math.PI / 6; water.receiveShadow = true; table.add(water);
+
+  const R = 1.18, SQ3 = Math.sqrt(3);
+  const TRI = [[0, 0], [SQ3 * R, 0], [SQ3 / 2 * R, 1.5 * R]];
+  const centroid = [(TRI[0][0] + TRI[1][0] + TRI[2][0]) / 3, (TRI[0][1] + TRI[1][1] + TRI[2][1]) / 3];
+  const RING = 5.6;
+  const interactive = []; const islandGroups = {}; const markers = []; const swayers = []; const islandCenter = {};
+  const TOP = 0.62;
+
+  function tile(ground) { const g = new T.Group(); const base = cyl(R * 0.95, R * 0.99, 0.5, C.sand, 6); base.position.y = 0.25; const top = cyl(R * 0.93, R * 0.95, 0.12, ground, 6); top.position.y = 0.56; g.add(base, top); g.userData.top = top; return g; }
+  function tree(x, z, s, pine) { const g = new T.Group(); const tr = cyl(0.04, 0.05, 0.22 * s, C.woodD, 8); tr.position.y = 0.11 * s; g.add(tr);
+    if (pine) { const c1 = cyl(0, 0.2 * s, 0.42 * s, C.sageD, 10); c1.position.y = 0.38 * s; g.add(c1); }
+    else { const f = mesh(new T.SphereGeometry(0.19 * s, 14, 10), Math.random() < .5 ? C.sage : C.sageD); f.position.y = 0.36 * s; f.scale.y = 0.9; g.add(f); }
+    g.position.set(x, TOP, z); g.userData.decor = true; swayers.push({ o: g, p: Math.random() * 6 }); return g; }
+  function roofPyr(w, h, c) { const r = cyl(0, w * 0.74, h, c, 4); r.rotation.y = Math.PI / 4; return r; }
+  function houseG(w, d, h, wall, roof) { const g = new T.Group(); const b = box(w, h, d, wall); b.position.y = h / 2; const r = roofPyr(Math.max(w, d), h * 0.55, roof); r.position.y = h + h * 0.27; r.scale.z = d / Math.max(w, d); r.scale.x = w / Math.max(w, d); const door = box(0.14, 0.22, 0.02, C.woodD); door.position.set(0, 0.11, d / 2 + 0.01); g.add(b, r, door); return g; }
+  const B = {
+    house: a => houseG(0.62, 0.55, 0.42, C.cream, a),
+    residence: a => { const g = new T.Group(); const h1 = houseG(0.5, 0.48, 0.42, C.cream, a); h1.position.set(-0.22, 0, 0.05); const h2 = houseG(0.42, 0.42, 0.56, C.beige, C.coral); h2.position.set(0.28, 0, -0.12); g.add(h1, h2); return g; },
+    shop: a => { const g = new T.Group(); const b = box(0.7, 0.42, 0.55, C.cream); b.position.y = 0.21; const roof = box(0.76, 0.06, 0.6, C.beige); roof.position.y = 0.45; const aw = box(0.72, 0.04, 0.22, a); aw.position.set(0, 0.34, 0.36); aw.rotation.x = 0.35; const win = box(0.42, 0.16, 0.02, C.glass); win.position.set(0, 0.2, 0.28); const sign = box(0.4, 0.12, 0.04, a); sign.position.set(0, 0.56, 0.18); g.add(b, roof, aw, win, sign); return g; },
+    market: a => { const g = new T.Group(); [[-0.28, -0.1], [0.12, -0.24], [0.2, 0.22], [-0.2, 0.28]].forEach(([x, z], i) => { const s = box(0.26, 0.16, 0.22, C.wood); s.position.set(x, 0.08, z); const t = box(0.32, 0.04, 0.28, i % 2 ? C.cream : a); t.position.set(x, 0.32, z); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([px, pz]) => { const p = box(0.025, 0.16, 0.025, C.woodD); p.position.set(x + px * 0.13, 0.24, z + pz * 0.11); g.add(p); }); g.add(s, t); }); return g; },
+    cafe: a => { const g = shopLike(a); [[-0.32, 0.42], [0.32, 0.42]].forEach(([x, z]) => { const pole = cyl(0.015, 0.015, 0.3, C.woodD, 6); pole.position.set(x, 0.15, z); const um = cyl(0, 0.17, 0.09, a === C.coral ? C.cream : C.coral, 12); um.position.set(x, 0.32, z); const tb = cyl(0.08, 0.08, 0.02, C.cream, 12); tb.position.set(x, 0.12, z); g.add(pole, um, tb); }); return g; },
+    studio: a => { const g = new T.Group(); const b = box(0.62, 0.55, 0.6, C.cream); b.position.y = 0.275; const sky = cyl(0.32, 0.32, 0.6, a, 3); sky.rotation.z = Math.PI / 2; sky.rotation.x = Math.PI / 2; sky.position.y = 0.62; sky.scale.set(1, 1, 0.55); const win = box(0.3, 0.24, 0.02, C.glass); win.position.set(0.1, 0.3, 0.31); g.add(b, sky, win); return g; },
+    lab: a => { const g = new T.Group(); const b = box(0.64, 0.36, 0.56, C.cream); b.position.y = 0.18; const dome = mesh(new T.SphereGeometry(0.24, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), C.glass); dome.position.set(-0.08, 0.36, 0); const ant = cyl(0.015, 0.015, 0.34, C.ink, 6); ant.position.set(0.22, 0.53, -0.14); const tipb = mesh(new T.SphereGeometry(0.04, 10, 8), a); tipb.position.set(0.22, 0.71, -0.14); g.add(b, dome, ant, tipb); return g; },
+    office: a => { const g = new T.Group(); const b = box(0.52, 1.0, 0.5, C.cream); b.position.y = 0.5; g.add(b); for (let i = 0; i < 4; i++) { const w = box(0.53, 0.06, 0.51, i % 2 ? C.glass : C.beige); w.position.y = 0.25 + i * 0.2; g.add(w); } const top = box(0.56, 0.05, 0.54, a); top.position.y = 1.02; g.add(top); return g; },
+    cowork: a => { const g = new T.Group(); const b = box(0.8, 0.36, 0.56, C.cream); b.position.y = 0.18; const glass = box(0.6, 0.22, 0.02, C.glass); glass.position.set(0, 0.18, 0.29); const roof = box(0.84, 0.05, 0.6, C.beige); roof.position.y = 0.385; g.add(b, glass, roof); [[-0.25, 0], [0.05, -0.1], [0.28, 0.08]].forEach(([x, z]) => { const p = mesh(new T.SphereGeometry(0.08, 10, 8), C.sage); p.position.set(x, 0.46, z); g.add(p); }); const flag = box(0.12, 0.08, 0.01, a); flag.position.set(0.36, 0.62, -0.2); const fp = cyl(0.01, 0.01, 0.26, C.ink, 6); fp.position.set(0.3, 0.5, -0.2); g.add(flag, fp); return g; },
+    tower: a => { const g = new T.Group(); const t1 = cyl(0.26, 0.3, 0.5, C.cream); t1.position.y = 0.25; const t2 = cyl(0.2, 0.24, 0.4, C.beige); t2.position.y = 0.7; const t3 = cyl(0, 0.26, 0.3, a); t3.position.y = 1.05; g.add(t1, t2, t3); return g; },
+    station: a => { const g = new T.Group(); const b = box(0.9, 0.3, 0.38, C.cream); b.position.y = 0.15; const roof = box(1.0, 0.05, 0.56, a); roof.position.y = 0.34; const clk = cyl(0.09, 0.09, 0.03, C.cream, 18); clk.rotation.x = Math.PI / 2; clk.position.set(0, 0.47, 0.05); const ct = box(0.24, 0.24, 0.1, C.beige); ct.position.set(0, 0.46, 0); const rail = box(1.1, 0.02, 0.06, C.woodD); rail.position.set(0, 0.01, 0.42); g.add(b, roof, ct, clk, rail); return g; },
+    plaza: a => { const g = new T.Group(); const pad = cyl(0.42, 0.44, 0.04, C.beige, 24); pad.position.y = 0.02; const stage2 = box(0.4, 0.12, 0.24, C.wood); stage2.position.set(0, 0.1, -0.16); const back = box(0.4, 0.3, 0.03, a); back.position.set(0, 0.29, -0.27); g.add(pad, stage2, back); [-0.32, 0.32].forEach(x => { const p = cyl(0.012, 0.012, 0.45, C.ink, 6); p.position.set(x, 0.24, 0.18); const f = cyl(0, 0.06, 0.12, x < 0 ? C.coral : C.mustard, 3); f.rotation.z = Math.PI / 2; f.position.set(x + 0.06, 0.42, 0.18); g.add(p, f); }); return g; },
+    park: a => { const g = new T.Group(); const lawn = cyl(0.44, 0.46, 0.03, '#BFD3B3', 24); lawn.position.y = 0.015; const fnt = cyl(0.13, 0.15, 0.08, C.cream, 18); fnt.position.y = 0.06; const wtr = cyl(0.1, 0.1, 0.02, C.seaD, 18); wtr.position.y = 0.1; const bench = box(0.22, 0.05, 0.07, C.wood); bench.position.set(0.24, 0.07, 0.24); g.add(lawn, fnt, wtr, bench); return g; },
+    garden: a => { const g = new T.Group(); const bed = cyl(0.4, 0.42, 0.05, '#C9D9B9', 6); bed.position.y = 0.025; g.add(bed); for (let i = 0; i < 6; i++) { const ang = i / 6 * Math.PI * 2; const p = box(0.035, 0.14, 0.035, C.wood); p.position.set(Math.cos(ang) * 0.4, 0.09, Math.sin(ang) * 0.4); g.add(p); } [[-0.12, 0.08, C.coral], [0.1, -0.06, C.mustard], [0.02, 0.18, C.coralL]].forEach(([x, z, c]) => { const fl = mesh(new T.SphereGeometry(0.06, 10, 8), c); fl.position.set(x, 0.1, z); g.add(fl); }); const shed = houseG(0.24, 0.22, 0.2, C.cream, a); shed.position.set(0.15, 0, -0.18); g.add(shed); return g; },
+    lighthouse: a => { const g = new T.Group(); const parts = [[0.2, 0.24, 0.3, C.cream], [0.17, 0.2, 0.28, a], [0.15, 0.17, 0.26, C.cream]]; let y = 0; parts.forEach(([rt, rb, h, c]) => { const p = cyl(rt, rb, h, c); p.position.y = y + h / 2; y += h; g.add(p); }); const lamp = cyl(0.12, 0.12, 0.14, '#F6E2A6', 12); lamp.material = M('#F6E2A6', { emissive: '#F2C86A', emissiveIntensity: 0.35 }); lamp.position.y = y + 0.07; const cap = cyl(0, 0.17, 0.16, a); cap.position.y = y + 0.22; const deck = cyl(0.19, 0.19, 0.03, C.ink); deck.position.y = y + 0.01; g.add(deck, lamp, cap); return g; },
+    watch: a => { const g = new T.Group(); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => { const l = box(0.04, 0.5, 0.04, C.wood); l.position.set(x * 0.15, 0.25, z * 0.15); g.add(l); }); const cab = box(0.4, 0.26, 0.4, C.cream); cab.position.y = 0.63; const r = roofPyr(0.44, 0.2, a); r.position.y = 0.86; const win = box(0.2, 0.1, 0.02, C.glass); win.position.set(0, 0.66, 0.21); g.add(cab, r, win); return g; },
+  };
+  function shopLike(a) { return B.shop(a); }
+
+  // hub: today intel tower
+  const hub = new T.Group(); scene.add(hub);
+  const hubTile = tile('#EFE6D6'); hub.add(hubTile);
+  const hubT = new T.Group(); const h1 = cyl(0.28, 0.34, 0.5, C.cream); h1.position.y = 0.25; const ring = cyl(0.4, 0.4, 0.05, C.coral, 24); ring.position.y = 0.52; const h2 = cyl(0.2, 0.26, 0.5, C.beige); h2.position.y = 0.8; const orb = mesh(new T.SphereGeometry(0.17, 20, 14), C.coral); orb.position.y = 1.18; hubT.add(h1, ring, h2, orb); hubT.position.y = TOP; hub.add(hubT);
+  [hubTile, hubT].forEach(o => o.traverse(m => { if (m.isMesh) { m.userData.hub = true; interactive.push(m); } }));
+  const people = []; for (let i = 0; i < 3; i++) { const p = new T.Group(); const bd = cyl(0.035, 0.045, 0.12, [C.coral, C.seaD, C.mustard][i], 8); bd.position.y = 0.06; const hd = mesh(new T.SphereGeometry(0.035, 8, 6), '#F1D6B8'); hd.position.y = 0.15; p.add(bd, hd); p.position.y = TOP; hub.add(p); people.push({ o: p, r: 0.62 + i * 0.1, s: 0.25 + i * 0.08, a: i * 2 }); }
+
+  // islands
+  ISL.forEach(isl => {
+    const g = new T.Group(); const ang = isl.angle * Math.PI / 180; const cx = Math.cos(ang) * RING, cz = -Math.sin(ang) * RING;
+    g.position.set(cx - centroid[0], 0, cz - centroid[1]); scene.add(g); islandGroups[isl.id] = g; islandCenter[isl.id] = new T.Vector3(cx, 0, cz);
+    g.userData = { lift: 0, liftTo: 0, dim: 0, subsPos: {} };
+    TRI.forEach(([x, z], ti) => {
+      const t = tile(isl.ground); t.position.set(x, 0, z); g.add(t);
+      t.traverse(m => { if (m.isMesh) { m.userData.island = isl.id; interactive.push(m); } });
+      const sub = isl.subs[ti]; const b = B[sub.type](isl.accent); b.position.set(x, TOP, z); b.rotation.y = (ti - 1) * 0.35 + Math.PI / 12; g.add(b);
+      b.traverse(m => { if (m.isMesh) { m.userData.island = isl.id; m.userData.sub = sub.id; interactive.push(m); } });
+      g.userData.subsPos[sub.id] = new T.Vector3(x, TOP, z);
+      const n = 2 + Math.floor(Math.random() * 2); for (let k = 0; k < n; k++) { const a2 = Math.random() * Math.PI * 2, rr = 0.66 + Math.random() * 0.2; g.add(tree(x + Math.cos(a2) * rr, z + Math.sin(a2) * rr, 0.8 + Math.random() * 0.45, Math.random() < 0.3)); }
+    });
+    // bridge from hub
+    const dir = new T.Vector3(cx, 0, cz).normalize(); const len = RING - 2.2; const br = new T.Group();
+    const deck = box(0.42, 0.06, len, C.wood); deck.position.y = 0.32; br.add(deck);
+    [-0.21, 0.21].forEach(x => { const rail = box(0.03, 0.03, len, C.woodD); rail.position.set(x, 0.46, 0); br.add(rail); for (let p = -len / 2 + 0.1; p <= len / 2; p += 0.45) { const post = box(0.03, 0.14, 0.03, C.woodD); post.position.set(x, 0.39, p); br.add(post); } });
+    br.position.copy(dir.clone().multiplyScalar(1.05 + len / 2)); br.lookAt(0, 0, 0); br.traverse(m => { m.userData && (m.userData.decor = true); }); scene.add(br);
+  });
+
+  // boats & ripples
+  const boats = []; [[9.0, 0.05, 0], [10.2, -0.035, 2.5]].forEach(([r, s, a], i) => { const b = new T.Group(); const hull = box(0.42, 0.1, 0.18, i ? C.cream : C.wood); hull.position.y = 0.05; const sail = cyl(0, 0.16, 0.36, i ? C.coral : C.cream, 3); sail.position.set(0, 0.28, 0); sail.scale.z = 0.2; b.add(hull, sail); scene.add(b); boats.push({ o: b, r, s, a }); });
+  const ripples = []; for (let i = 0; i < 6; i++) { const m = new T.Mesh(new T.RingGeometry(0.3, 0.36, 32), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.y = 0.04; scene.add(m); ripples.push({ m, t: Math.random() * 4, p: null }); }
+  function placeRipple(rp) { const isl = ISL[Math.floor(Math.random() * ISL.length)]; const c = islandCenter[isl.id]; const a = Math.random() * Math.PI * 2; rp.m.position.set(c.x + Math.cos(a) * 2.3, 0.04, c.z + Math.sin(a) * 2.3); }
+  ripples.forEach(placeRipple);
+
+  // markers for subs with new content
+  const markerGeo = new T.ConeGeometry(0.11, 0.24, 14); const ballGeo = new T.SphereGeometry(0.12, 14, 10);
+  function refreshMarkers() {
+    markers.splice(0).forEach(m => m.o.parent.remove(m.o));
+    ISL.forEach(isl => isl.subs.forEach(s => { const n = items().filter(it => it.island === isl.id && it.sub === s.id && isNew(it)).length; if (!n) return; const g = new T.Group(); const c = new T.Mesh(markerGeo, M(C.coral)); c.rotation.x = Math.PI; c.position.y = 0; const b = new T.Mesh(ballGeo, M(C.coral)); b.position.y = 0.17; const dot = new T.Mesh(new T.SphereGeometry(0.05, 10, 8), M(C.cream)); dot.position.set(0, 0.17, 0.1); g.add(c, b, dot); const p = islandGroups[isl.id].userData.subsPos[s.id]; g.position.set(p.x, p.y + (s.type === 'office' || s.type === 'tower' || s.type === 'lighthouse' ? 1.45 : 1.0), p.z); islandGroups[isl.id].add(g); markers.push({ o: g, y: g.position.y, p: Math.random() * 6 }); }));
+  }
+  refreshMarkers();
+
+  // camera
+  let W = 1, Hh = 1;
+  function resize() { const r = stage.getBoundingClientRect(); W = Math.max(1, r.width); Hh = Math.max(1, r.height); renderer.setSize(W, Hh, false); const aspect = W / Hh; baseH = Math.max(17.5, (narrow() ? 16 : 24) / aspect); cam.left = -baseH * aspect / 2; cam.right = baseH * aspect / 2; cam.top = baseH / 2; cam.bottom = -baseH / 2; cam.updateProjectionMatrix(); dirty = true; }
+  function applyCam() { cam.position.copy(view.target).add(OFFSET); cam.lookAt(view.target); cam.zoom = view.zoom; cam.updateProjectionMatrix(); cam.updateMatrixWorld(); }
+  const upp = () => baseH / view.zoom / Hh; // world units per pixel
+  const right = new T.Vector3(), fwd = new T.Vector3();
+  function axes() { cam.updateMatrixWorld(); right.setFromMatrixColumn(cam.matrixWorld, 0); right.y = 0; right.normalize(); fwd.setFromMatrixColumn(cam.matrixWorld, 1); fwd.y = 0; fwd.normalize(); }
+  const ELEV = Math.atan2(OFFSET.y, Math.hypot(OFFSET.x, OFFSET.z));
+  function pan(dx, dy) { axes(); const u = upp(); view.target.addScaledVector(right, -dx * u).addScaledVector(fwd, dy * u / Math.sin(ELEV)); clampTarget(); dirty = true; }
+  function clampTarget() { const r = Math.hypot(view.target.x, view.target.z); if (r > 10) view.target.multiplyScalar(10 / r); view.target.y = 0; }
+  function zoomBy(f) { view.zoom = Math.min(4, Math.max(0.7, view.zoom * f)); dirty = true; }
+
+  let tween = null;
+  function animateTo(target, zoom) { if (reduce) { view.target.copy(target); view.zoom = zoom; tween = null; dirty = true; return; } tween = { t0: performance.now(), dur: 650, a: view.target.clone(), b: target.clone(), za: view.zoom, zb: zoom }; }
+  let saved = null;
+  function focusIsland(id) {
+    if (!saved) saved = { target: view.target.clone(), zoom: view.zoom };
+    const z = narrow() ? 1.6 : 1.8; const c = islandCenter[id].clone(); axes(); const u = baseH / z / Hh;
+    if (narrow()) { const sheet = panel.offsetHeight || Hh * 0.64; c.addScaledVector(fwd, -(sheet / 2) * u / Math.sin(ELEV)); }
+    else { const pw = panel.offsetWidth || 420; c.addScaledVector(right, (pw / 2) * u); }
+    animateTo(c, z);
+  }
+  function restoreView() { if (saved) { animateTo(saved.target, saved.zoom); saved = null; } }
+  function home() { saved = null; animateTo(new T.Vector3(0, 0, 0), 1); }
+
+  // hover / select visuals
+  let hovered = null, selected = null, selectedSub = null;
+  function setLift() { ISL.forEach(i => { const g = islandGroups[i.id]; g.userData.liftTo = (i.id === hovered || i.id === selected) ? 0.16 : 0; }); dirty = true; }
+  function hover(id) { if (hovered === id) return; hovered = id; setLift(); renderer.domElement.style.cursor = id ? 'pointer' : 'grab'; }
+  function select(id, sub) { selected = id; selectedSub = sub || null; setLift(); }
+  function applyFilter() { ISL.forEach(i => { const fm = islandStats(i.id, true); const off = filtering() && (fm.n === 0 || (state.topic !== 'all' && state.topic !== i.id)); islandGroups[i.id].userData.dimTo = off ? 1 : 0; }); dirty = true; }
+  const dimCache = new Map();
+  function tintIsland(g, d) { g.traverse(m => { if (!m.isMesh || !m.material || !m.material.color) return; if (!dimCache.has(m)) { dimCache.set(m, { base: m.material, dim: null }); } const e = dimCache.get(m); if (d > 0.5) { if (!e.dim) { e.dim = e.base.clone(); e.dim.color = e.base.color.clone().lerp(new T.Color('#D9D2C6'), 0.6); } m.material = e.dim; } else m.material = e.base; }); }
+
+  // pointer
+  const ray = new T.Raycaster(), ndc = new T.Vector2();
+  function pick(x, y) { ndc.set(x / W * 2 - 1, -(y / Hh) * 2 + 1); ray.setFromCamera(ndc, cam); const hit = ray.intersectObjects(interactive, false)[0]; if (!hit) return null; const u = hit.object.userData; return u.hub ? { hub: true } : { island: u.island, sub: u.sub || null }; }
+  const pts = new Map(); let drag = null, pinch = null, moved = 0;
+  const el = renderer.domElement; el.style.cursor = 'grab';
+  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; if (pts.size === 1) drag = { x: e.clientX, y: e.clientY }; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: view.zoom }; drag = null; } hideIntroSoft(); });
+  el.addEventListener('pointermove', e => {
+    const r = el.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (pts.has(e.pointerId)) { const p = pts.get(e.pointerId); const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+      if (pinch && pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); view.zoom = Math.min(4, Math.max(0.7, pinch.z * d / pinch.d)); dirty = true; }
+      else if (drag) { pan(dx, dy); el.style.cursor = 'grabbing'; tween = null; saved = null; } return; }
+    if (e.pointerType === 'mouse') { const h = pick(x, y); const id = h && h.island || null; hover(id); if (h && h.hub) el.style.cursor = 'pointer'; showTip(id, x, y); }
+  });
+  function end(e) { if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId); const r = el.getBoundingClientRect();
+    if (pts.size === 0) { if (drag && moved < 6) { const h = pick(e.clientX - r.left, e.clientY - r.top); if (h && h.hub) openToday(null); else if (h) selectIsland(h.island, h.sub, labelEls[h.island]); } drag = null; pinch = null; el.style.cursor = hovered ? 'pointer' : 'grab'; }
+    else if (pts.size === 1) { pinch = null; const p = [...pts.values()][0]; drag = { x: p.x, y: p.y }; } }
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('pointerleave', () => { if (!pts.size) { hover(null); tip.hidden = true; } });
+  el.addEventListener('wheel', e => { e.preventDefault(); zoomBy(Math.exp(-e.deltaY * 0.0015)); tween = null; saved = null; }, { passive: false });
+  stage.addEventListener('keydown', e => { if (e.target !== stage) return; const s = 40; const k = e.key;
+    if (k === 'ArrowLeft') pan(s, 0); else if (k === 'ArrowRight') pan(-s, 0); else if (k === 'ArrowUp') pan(0, s); else if (k === 'ArrowDown') pan(0, -s);
+    else if (k === '+' || k === '=') zoomBy(1.2); else if (k === '-' || k === '_') zoomBy(1 / 1.2); else if (k === '0' || k === 'Home') home(); else return; e.preventDefault(); });
+  function hideIntroSoft() { const i = $('#intro'); if (!i.hidden) { i.hidden = true; i.dataset.gone = '1'; } }
+
+  // labels projection
+  const v = new T.Vector3();
+  function placeLabels() {
+    const pos = (key, p) => { v.copy(p).project(cam); const x = (v.x + 1) / 2 * W, y = (1 - v.y) / 2 * Hh; const lb = labelEls[key]; if (!lb) return; const off = x < -60 || x > W + 60 || y < -20 || y > Hh + 80; lb.style.visibility = off ? 'hidden' : 'visible'; lb.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`; };
+    ISL.forEach(i => { const c = islandCenter[i.id]; pos(i.id, v.set(c.x, 2.0 + islandGroups[i.id].position.y, c.z).clone()); });
+    pos('hub', new T.Vector3(0, 2.1, 0));
+  }
+
+  // loop
+  let dirty = true, paused = false, last = performance.now();
+  function frame(now) {
+    requestAnimationFrame(frame); if (paused || document.hidden) { last = now; return; }
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; const t = now / 1000;
+    if (tween) { const k = Math.min(1, (now - tween.t0) / tween.dur); const e = 1 - Math.pow(1 - k, 3); view.target.lerpVectors(tween.a, tween.b, e); view.zoom = tween.za + (tween.zb - tween.za) * e; if (k >= 1) tween = null; dirty = true; }
+    ISL.forEach(i => { const g = islandGroups[i.id], u = g.userData; const ny = reduce ? u.liftTo : u.lift + (u.liftTo - u.lift) * Math.min(1, dt * 10); if (Math.abs(ny - u.lift) > 1e-4) { u.lift = ny; g.position.y = ny; dirty = true; } const d = u.dimTo || 0; if (u.dimNow !== d) { u.dimNow = d; tintIsland(g, d); dirty = true; } });
+    if (!reduce) {
+      boats.forEach(b => { b.a += b.s * dt; b.o.position.set(Math.cos(b.a) * b.r, 0.02, Math.sin(b.a) * b.r); b.o.rotation.y = -b.a + (b.s > 0 ? Math.PI : 0); });
+      swayers.forEach(s => { s.o.rotation.z = Math.sin(t * 0.9 + s.p) * 0.03; });
+      markers.forEach(m => { m.o.position.y = m.y + Math.sin(t * 2 + m.p) * 0.06; m.o.rotation.y = t * 0.8; });
+      people.forEach(p => { p.a += p.s * dt; p.o.position.set(Math.cos(p.a) * p.r, TOP, Math.sin(p.a) * p.r); });
+      ripples.forEach(rp => { rp.t += dt; const k = (rp.t % 4) / 4; rp.m.scale.setScalar(1 + k * 2.2); rp.m.material.opacity = 0.45 * (1 - k); if (rp.t % 4 < dt) placeRipple(rp); });
+      dirty = true;
+    }
+    if (dirty) { applyCam(); renderer.render(scene, cam); placeLabels(); dirty = false; }
+  }
+  new ResizeObserver(resize).observe(stage); resize(); applyCam();
+  requestAnimationFrame(frame);
+
+  return { focusIsland, restoreView, home, hover, select, applyFilter, refreshMarkers, zoomBy: f => { zoomBy(f); tween = null; }, pause: p => { paused = p; if (!p) { resize(); dirty = true; } }, kick: () => { dirty = true; } };
+}
+
+/* ---------- boot ---------- */
+renderChips(); buildLabels(); renderStatus();
+if (store.get('lh-intro') === '1') $('#intro').hidden = true;
+try { scene3d = makeScene(); } catch (err) { scene3d = null; }
+$('#homeBtn').addEventListener('click', () => { closePanel(); scene3d && scene3d.home(); });
+$('#zin').addEventListener('click', () => scene3d && scene3d.zoomBy(1.25));
+$('#zout').addEventListener('click', () => scene3d && scene3d.zoomBy(0.8));
+if (!scene3d) { labelsEl.hidden = true; setMode('list'); showFallbackNote(); }
+else { scene3d.applyFilter(); }
+requestAnimationFrame(() => requestAnimationFrame(() => { $('#loading').hidden = true; }));
+const h = (location.hash || '').slice(1);
+if (h && islById[h] && scene3d) setTimeout(() => selectIsland(h, null, labelEls[h]), 300);
+else if (h === 'today') setTimeout(() => openToday($('#todayBtn')), 300);
+else if (h === 'list') setMode('list');
+})();
+</script>
+
+</body>
+</html>
